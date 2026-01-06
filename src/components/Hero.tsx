@@ -1,7 +1,27 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-wedding.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import heroImageFallback from "@/assets/hero-wedding.jpg";
 
 const Hero = () => {
+  const [heroImage, setHeroImage] = useState<string>(heroImageFallback);
+
+  useEffect(() => {
+    const fetchHeroImage = async () => {
+      const { data } = await supabase
+        .from('site_images')
+        .select('image_url')
+        .eq('section', 'hero')
+        .maybeSingle();
+
+      if (data?.image_url) {
+        setHeroImage(data.image_url);
+      }
+    };
+
+    fetchHeroImage();
+  }, []);
+
   const scrollToContact = () => {
     const element = document.getElementById("contato");
     element?.scrollIntoView({ behavior: "smooth" });

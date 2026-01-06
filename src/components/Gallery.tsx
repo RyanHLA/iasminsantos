@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+// Fallback images
 import casamentoImg from "@/assets/gallery-casamento.jpg";
 import gestanteImg from "@/assets/gallery-gestante.jpg";
 import quinzeImg from "@/assets/gallery-15anos.jpg";
@@ -13,7 +16,7 @@ interface GalleryCategory {
   description: string;
 }
 
-const categories: GalleryCategory[] = [
+const defaultCategories: GalleryCategory[] = [
   {
     id: "casamentos",
     title: "Casamentos",
@@ -54,6 +57,48 @@ const categories: GalleryCategory[] = [
 
 const Gallery = () => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<GalleryCategory[]>(defaultCategories);
+
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      const { data } = await supabase
+        .from('site_images')
+        .select('*')
+        .eq('section', 'gallery')
+        .order('display_order');
+
+      if (data && data.length > 0) {
+        // Group by category and get the first image for each
+        const categoryMap = new Map<string, { image: string; title?: string; description?: string }>();
+        
+        data.forEach((img) => {
+          if (img.category && !categoryMap.has(img.category)) {
+            categoryMap.set(img.category, {
+              image: img.image_url,
+              title: img.title,
+              description: img.description,
+            });
+          }
+        });
+
+        // Merge with default categories
+        const updatedCategories = defaultCategories.map((cat) => {
+          const dbImage = categoryMap.get(cat.id);
+          if (dbImage) {
+            return {
+              ...cat,
+              image: dbImage.image,
+            };
+          }
+          return cat;
+        });
+
+        setCategories(updatedCategories);
+      }
+    };
+
+    fetchGalleryImages();
+  }, []);
 
   return (
     <section id="galeria" className="section-padding bg-background">
