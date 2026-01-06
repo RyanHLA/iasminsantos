@@ -50,6 +50,13 @@ const Footer = () => {
             <p className="mt-2 flex items-center justify-center gap-1 font-sans text-xs text-muted-foreground">
               Feito com <Heart className="h-3 w-3 text-gold" /> no Brasil
             </p>
+            {/* Discrete admin link */}
+            <a
+              href="/auth"
+              className="mt-4 inline-block font-sans text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+            >
+              Área Administrativa
+            </a>
           </div>
         </div>
       </div>

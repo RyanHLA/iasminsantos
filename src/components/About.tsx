@@ -1,6 +1,26 @@
-import photographerImg from "@/assets/photographer-portrait.jpg";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import photographerImgFallback from "@/assets/photographer-portrait.jpg";
 
 const About = () => {
+  const [photographerImg, setPhotographerImg] = useState<string>(photographerImgFallback);
+
+  useEffect(() => {
+    const fetchAboutImage = async () => {
+      const { data } = await supabase
+        .from('site_images')
+        .select('image_url')
+        .eq('section', 'about')
+        .maybeSingle();
+
+      if (data?.image_url) {
+        setPhotographerImg(data.image_url);
+      }
+    };
+
+    fetchAboutImage();
+  }, []);
+
   return (
     <section id="sobre" className="section-padding bg-secondary">
       <div className="mx-auto max-w-6xl px-6">
