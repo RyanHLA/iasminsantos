@@ -8,7 +8,7 @@ import { Lock } from 'lucide-react';
 const Auth = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,9 +24,9 @@ const Auth = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/admin`,
-        },
+         options: {
+           redirectTo: `${window.location.origin}/auth`,
+         },
       });
 
       if (error) {
@@ -43,6 +43,46 @@ const Auth = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+
+  if (user && !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gold/10">
+              <Lock className="h-8 w-8 text-gold" />
+            </div>
+            <h1 className="font-serif text-3xl font-normal text-foreground">Área Administrativa</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Você já está logada, mas esta conta não tem permissão de administradora.
+            </p>
+          </div>
+
+          <div className="rounded-md border border-border/50 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Conta logada</p>
+            <p className="break-all">{user.email}</p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => signOut().then(() => navigate('/'))}
+              variant="outline"
+              className="w-full h-12 border-border/50"
+            >
+              Sair
+            </Button>
+            <a
+              href="/"
+              className="block text-center text-sm text-muted-foreground transition-colors hover:text-gold"
+            >
+              ← Voltar ao site
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
