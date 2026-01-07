@@ -14,8 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      albums: {
+        Row: {
+          category: string
+          cover_image_url: string | null
+          created_at: string
+          event_date: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cover_image_url?: string | null
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_images: {
         Row: {
+          album_id: string | null
           category: string | null
           created_at: string
           description: string | null
@@ -27,6 +61,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          album_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
@@ -38,6 +73,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          album_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
@@ -48,7 +84,15 @@ export type Database = {
           title?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "site_images_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
