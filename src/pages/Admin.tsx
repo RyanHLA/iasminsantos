@@ -50,15 +50,15 @@ const Admin = () => {
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-muted-foreground transition-colors hover:text-gold"
+              className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-medium text-soft-black transition-colors hover:bg-gold-dark"
             >
               Ver site →
             </a>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="border-border/50"
+              className="text-muted-foreground hover:text-foreground"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sair
