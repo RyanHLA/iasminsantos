@@ -612,14 +612,7 @@ const AdminGallery = () => {
       </div>
 
       {/* Images Grid with DnD */}
-      {filteredImages.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/50 p-12 text-center">
-          <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-          <p className="text-muted-foreground">
-            Nenhuma foto encontrada. Arraste fotos acima para começar!
-          </p>
-        </div>
-      ) : (
+      {filteredImages.length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
