@@ -170,14 +170,23 @@ const Gallery = () => {
     }
   }, [selectedAlbum]);
 
+  const scrollToSection = () => {
+    const section = document.getElementById("albuns");
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const handleCategoryClick = (category: Category) => {
     setSelectedCategory(category);
     setCurrentLevel("albums");
+    setTimeout(scrollToSection, 100);
   };
 
   const handleAlbumClick = (album: Album) => {
     setSelectedAlbum(album);
     setCurrentLevel("photos");
+    setTimeout(scrollToSection, 100);
   };
 
   const handleBack = () => {
@@ -190,6 +199,7 @@ const Gallery = () => {
       setAlbums([]);
       setCurrentLevel("categories");
     }
+    setTimeout(scrollToSection, 100);
   };
 
   const formatDate = (dateString: string | null) => {
