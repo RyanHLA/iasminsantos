@@ -7,7 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Edit, Upload, Loader2, Star, GripVertical, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Plus, Trash2, Edit, Upload, Loader2, Star, GripVertical, X, 
+  ChevronRight, ArrowLeft, Calendar, Image, FolderOpen
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DndContext,
@@ -26,6 +30,14 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb';
 
 interface GalleryImage {
   id: string;
@@ -35,6 +47,17 @@ interface GalleryImage {
   image_url: string;
   display_order: number;
   is_featured?: boolean;
+  album_id?: string | null;
+}
+
+interface Album {
+  id: string;
+  category: string;
+  title: string;
+  event_date: string | null;
+  status: 'draft' | 'published';
+  cover_image_url: string | null;
+  created_at: string;
 }
 
 interface UploadingFile {
@@ -43,6 +66,8 @@ interface UploadingFile {
   status: 'pending' | 'uploading' | 'complete' | 'error';
   preview: string;
 }
+
+type NavigationLevel = 'categories' | 'albums' | 'photos';
 
 const CATEGORIES = [
   { id: 'casamentos', label: 'Casamentos' },
@@ -61,7 +86,7 @@ const SortableImageCard = ({
   onToggleFeatured,
   isSelected,
   onSelect,
-  categoryLabel,
+  onSetCover,
 }: {
   image: GalleryImage;
   onEdit: () => void;
@@ -69,7 +94,7 @@ const SortableImageCard = ({
   onToggleFeatured: () => void;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
-  categoryLabel: string;
+  onSetCover: () => void;
 }) => {
   const {
     attributes,
@@ -147,6 +172,15 @@ const SortableImageCard = ({
         <Button
           size="icon"
           variant="secondary"
+          onClick={onSetCover}
+          className="h-10 w-10 rounded-full bg-background/90 hover:bg-background"
+          title="Definir como capa"
+        >
+          <Image className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
           onClick={onToggleFeatured}
           className={`h-10 w-10 rounded-full ${
             image.is_featured 
@@ -170,10 +204,7 @@ const SortableImageCard = ({
 
       {/* Info Footer */}
       <div className="p-3">
-        <p className="text-xs uppercase tracking-wide text-gold">
-          {categoryLabel}
-        </p>
-        <p className="mt-1 truncate font-medium text-foreground">
+        <p className="truncate font-medium text-foreground text-sm">
           {image.title || 'Sem título'}
         </p>
       </div>
@@ -181,57 +212,309 @@ const SortableImageCard = ({
   );
 };
 
+// Category Card Component
+const CategoryCard = ({
+  category,
+  albumCount,
+  coverImage,
+  onClick,
+}: {
+  category: { id: string; label: string };
+  albumCount: number;
+  coverImage: string | null;
+  onClick: () => void;
+}) => (
+  <div
+    onClick={onClick}
+    className="group relative cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card transition-all hover:border-gold/50 hover:shadow-xl"
+  >
+    <div className="aspect-[4/3] relative">
+      {coverImage ? (
+        <img
+          src={coverImage}
+          alt={category.label}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <div className="h-full w-full bg-muted/50 flex items-center justify-center">
+          <FolderOpen className="h-16 w-16 text-muted-foreground/30" />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-soft-black/80 via-transparent to-transparent" />
+    </div>
+    <div className="absolute bottom-0 left-0 right-0 p-6">
+      <h3 className="font-serif text-2xl text-white">{category.label}</h3>
+      <p className="mt-1 text-sm text-white/70">{albumCount} {albumCount === 1 ? 'Álbum' : 'Álbuns'}</p>
+    </div>
+    <div className="absolute right-4 top-4 rounded-full bg-background/80 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+      <ChevronRight className="h-5 w-5 text-foreground" />
+    </div>
+  </div>
+);
+
+// Album Card Component
+const AlbumCard = ({
+  album,
+  photoCount,
+  onClick,
+  onEdit,
+  onDelete,
+}: {
+  album: Album;
+  photoCount: number;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => (
+  <div
+    className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/50 bg-card transition-all hover:border-gold/50 hover:shadow-lg"
+  >
+    <div onClick={onClick} className="aspect-[3/4] relative">
+      {album.cover_image_url ? (
+        <img
+          src={album.cover_image_url}
+          alt={album.title}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div className="h-full w-full bg-muted/30 flex items-center justify-center">
+          <Image className="h-12 w-12 text-muted-foreground/30" />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-soft-black/70 via-transparent to-transparent" />
+    </div>
+    
+    {/* Status Badge */}
+    <div className="absolute left-3 top-3">
+      <Badge variant={album.status === 'published' ? 'default' : 'secondary'} className={album.status === 'published' ? 'bg-green-600' : ''}>
+        {album.status === 'published' ? 'Publicado' : 'Rascunho'}
+      </Badge>
+    </div>
+    
+    {/* Action Buttons */}
+    <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <Button
+        size="icon"
+        variant="secondary"
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        className="h-8 w-8 rounded-full bg-background/80 hover:bg-background"
+      >
+        <Edit className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        size="icon"
+        variant="destructive"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="h-8 w-8 rounded-full"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+    
+    {/* Info Footer */}
+    <div onClick={onClick} className="p-4">
+      <h4 className="font-serif text-lg text-foreground truncate">{album.title}</h4>
+      <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          {album.event_date ? new Date(album.event_date).toLocaleDateString('pt-BR') : 'Sem data'}
+        </span>
+        <span>{photoCount} fotos</span>
+      </div>
+    </div>
+  </div>
+);
+
 const AdminGallery = () => {
+  // Navigation state
+  const [currentLevel, setCurrentLevel] = useState<NavigationLevel>('categories');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  
+  // Data state
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Dialog state
+  const [isAlbumDialogOpen, setIsAlbumDialogOpen] = useState(false);
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
   const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
+  // Selection & upload state
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadCategory, setUploadCategory] = useState('casamentos');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
-  // Form state for editing
-  const [formData, setFormData] = useState({
-    category: '',
+  
+  // Form state
+  const [albumFormData, setAlbumFormData] = useState({
+    title: '',
+    event_date: '',
+    status: 'draft' as 'draft' | 'published',
+  });
+  const [photoFormData, setPhotoFormData] = useState({
     title: '',
     description: '',
   });
 
+  const { toast } = useToast();
+
   // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   useEffect(() => {
-    fetchImages();
+    fetchAlbums();
   }, []);
 
-  const fetchImages = async () => {
+  useEffect(() => {
+    if (selectedAlbum) {
+      fetchPhotos(selectedAlbum.id);
+    }
+  }, [selectedAlbum]);
+
+  const fetchAlbums = async () => {
     const { data, error } = await supabase
-      .from('site_images')
+      .from('albums')
       .select('*')
-      .eq('section', 'gallery')
-      .order('display_order');
+      .order('created_at', { ascending: false });
 
     if (error) {
-      toast({ title: 'Erro ao carregar imagens', variant: 'destructive' });
+      toast({ title: 'Erro ao carregar álbuns', variant: 'destructive' });
     } else {
-      setImages((data || []) as GalleryImage[]);
+      setAlbums((data || []) as Album[]);
     }
     setLoading(false);
   };
 
+  const fetchPhotos = async (albumId: string) => {
+    const { data, error } = await supabase
+      .from('site_images')
+      .select('*')
+      .eq('album_id', albumId)
+      .order('display_order');
+
+    if (error) {
+      toast({ title: 'Erro ao carregar fotos', variant: 'destructive' });
+    } else {
+      setImages((data || []) as GalleryImage[]);
+    }
+  };
+
+  const getAlbumCount = (categoryId: string) => 
+    albums.filter(a => a.category === categoryId).length;
+
+  const getPhotoCount = (albumId: string) => 
+    images.filter(i => i.album_id === albumId).length;
+
+  const getCategoryCover = (categoryId: string) => {
+    const categoryAlbums = albums.filter(a => a.category === categoryId);
+    return categoryAlbums.find(a => a.cover_image_url)?.cover_image_url || null;
+  };
+
+  // Navigation handlers
+  const navigateToCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setCurrentLevel('albums');
+  };
+
+  const navigateToAlbum = (album: Album) => {
+    setSelectedAlbum(album);
+    setCurrentLevel('photos');
+  };
+
+  const navigateBack = () => {
+    if (currentLevel === 'photos') {
+      setSelectedAlbum(null);
+      setCurrentLevel('albums');
+      setImages([]);
+      setSelectedImages(new Set());
+    } else if (currentLevel === 'albums') {
+      setSelectedCategory(null);
+      setCurrentLevel('categories');
+    }
+  };
+
+  // Album CRUD
+  const handleCreateAlbum = async () => {
+    if (!selectedCategory || !albumFormData.title.trim()) return;
+
+    const { error } = await supabase.from('albums').insert({
+      category: selectedCategory,
+      title: albumFormData.title,
+      event_date: albumFormData.event_date || null,
+      status: albumFormData.status,
+    });
+
+    if (error) {
+      toast({ title: 'Erro ao criar álbum', variant: 'destructive' });
+    } else {
+      toast({ title: 'Álbum criado com sucesso!' });
+      resetAlbumForm();
+      fetchAlbums();
+    }
+  };
+
+  const handleUpdateAlbum = async () => {
+    if (!editingAlbum) return;
+
+    const { error } = await supabase
+      .from('albums')
+      .update({
+        title: albumFormData.title,
+        event_date: albumFormData.event_date || null,
+        status: albumFormData.status,
+      })
+      .eq('id', editingAlbum.id);
+
+    if (error) {
+      toast({ title: 'Erro ao atualizar álbum', variant: 'destructive' });
+    } else {
+      toast({ title: 'Álbum atualizado com sucesso!' });
+      resetAlbumForm();
+      fetchAlbums();
+    }
+  };
+
+  const handleDeleteAlbum = async (albumId: string) => {
+    if (!confirm('Tem certeza? Todas as fotos do álbum serão excluídas.')) return;
+
+    const { error } = await supabase.from('albums').delete().eq('id', albumId);
+
+    if (error) {
+      toast({ title: 'Erro ao excluir álbum', variant: 'destructive' });
+    } else {
+      toast({ title: 'Álbum excluído!' });
+      fetchAlbums();
+    }
+  };
+
+  const openAlbumDialog = (album?: Album) => {
+    if (album) {
+      setEditingAlbum(album);
+      setAlbumFormData({
+        title: album.title,
+        event_date: album.event_date || '',
+        status: album.status,
+      });
+    } else {
+      setEditingAlbum(null);
+      setAlbumFormData({ title: '', event_date: '', status: 'draft' });
+    }
+    setIsAlbumDialogOpen(true);
+  };
+
+  const resetAlbumForm = () => {
+    setAlbumFormData({ title: '', event_date: '', status: 'draft' });
+    setEditingAlbum(null);
+    setIsAlbumDialogOpen(false);
+  };
+
+  // Photo upload & CRUD
   const uploadImage = async (
     file: File,
     onProgress: (progress: number) => void
@@ -239,7 +522,6 @@ const AdminGallery = () => {
     const fileExt = file.name.split('.').pop();
     const fileName = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-    // Simulate progress since Supabase doesn't provide upload progress
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
       currentProgress = Math.min(currentProgress + 10, 90);
@@ -267,9 +549,10 @@ const AdminGallery = () => {
   };
 
   const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
+    if (!selectedAlbum) return;
+    
     const fileArray = Array.from(files);
     
-    // Create upload entries with previews
     const newUploads: UploadingFile[] = fileArray.map((file) => ({
       file,
       progress: 0,
@@ -279,33 +562,28 @@ const AdminGallery = () => {
 
     setUploadingFiles((prev) => [...prev, ...newUploads]);
 
-    // Upload files sequentially
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
-      const currentIndex = newUploads.findIndex((u) => u.file === file);
-      const uploadIndex = uploadingFiles.length + currentIndex;
 
       setUploadingFiles((prev) =>
-        prev.map((u, idx) =>
+        prev.map((u) =>
           u.file === file ? { ...u, status: 'uploading' as const } : u
         )
       );
 
-      let currentProgress = 0;
       const url = await uploadImage(file, (progress) => {
-        currentProgress = progress;
         setUploadingFiles((prev) =>
           prev.map((u) =>
-            u.file === file ? { ...u, progress: currentProgress } : u
+            u.file === file ? { ...u, progress } : u
           )
         );
       });
 
       if (url) {
-        // Save to database
         await supabase.from('site_images').insert({
           section: 'gallery',
-          category: uploadCategory,
+          category: selectedAlbum.category,
+          album_id: selectedAlbum.id,
           title: file.name.replace(/\.[^/.]+$/, ''),
           description: '',
           image_url: url,
@@ -319,21 +597,20 @@ const AdminGallery = () => {
         );
       } else {
         setUploadingFiles((prev) =>
-          prev.map((u, idx) =>
-            idx === uploadIndex ? { ...u, status: 'error' } : u
+          prev.map((u) =>
+            u.file === file ? { ...u, status: 'error' as const } : u
           )
         );
       }
     }
 
-    // Clean up completed uploads and refresh
     setTimeout(() => {
       setUploadingFiles((prev) => prev.filter((u) => u.status !== 'complete'));
-      fetchImages();
+      fetchPhotos(selectedAlbum.id);
     }, 1500);
 
-    toast({ title: `${fileArray.length} foto(s) enviada(s) com sucesso!` });
-  }, [images.length, uploadCategory, uploadingFiles.length]);
+    toast({ title: `${fileArray.length} foto(s) enviada(s)!` });
+  }, [selectedAlbum, images.length]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -364,151 +641,189 @@ const AdminGallery = () => {
       const newImages = arrayMove(images, oldIndex, newIndex);
       setImages(newImages);
 
-      // Update display_order in database
-      const updates = newImages.map((img, idx) => ({
-        id: img.id,
-        display_order: idx,
-      }));
-
-      for (const update of updates) {
+      for (let i = 0; i < newImages.length; i++) {
         await supabase
           .from('site_images')
-          .update({ display_order: update.display_order })
-          .eq('id', update.id);
+          .update({ display_order: i })
+          .eq('id', newImages[i].id);
       }
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDeletePhoto = async (id: string) => {
+    if (!confirm('Excluir esta foto?')) return;
 
-    if (!editingImage) return;
-
-    const { error } = await supabase
-      .from('site_images')
-      .update({
-        category: formData.category,
-        title: formData.title,
-        description: formData.description,
-      })
-      .eq('id', editingImage.id);
+    const { error } = await supabase.from('site_images').delete().eq('id', id);
 
     if (error) {
-      toast({ title: 'Erro ao salvar imagem', variant: 'destructive' });
+      toast({ title: 'Erro ao excluir', variant: 'destructive' });
     } else {
-      toast({ title: 'Imagem atualizada com sucesso!' });
-      resetForm();
-      fetchImages();
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta imagem?')) return;
-
-    const { error } = await supabase
-      .from('site_images')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast({ title: 'Erro ao excluir imagem', variant: 'destructive' });
-    } else {
-      toast({ title: 'Imagem excluída com sucesso!' });
+      toast({ title: 'Foto excluída!' });
       setSelectedImages((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
-      fetchImages();
+      if (selectedAlbum) fetchPhotos(selectedAlbum.id);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Tem certeza que deseja excluir ${selectedImages.size} imagem(ns)?`)) return;
+    if (!confirm(`Excluir ${selectedImages.size} foto(s)?`)) return;
 
     for (const id of selectedImages) {
       await supabase.from('site_images').delete().eq('id', id);
     }
 
-    toast({ title: `${selectedImages.size} imagem(ns) excluída(s)!` });
+    toast({ title: `${selectedImages.size} foto(s) excluída(s)!` });
     setSelectedImages(new Set());
-    fetchImages();
+    if (selectedAlbum) fetchPhotos(selectedAlbum.id);
   };
 
   const handleToggleFeatured = async (image: GalleryImage) => {
-    const { error } = await supabase
+    await supabase
       .from('site_images')
       .update({ is_featured: !image.is_featured } as any)
       .eq('id', image.id);
 
-    if (!error) {
-      fetchImages();
-      toast({ 
-        title: image.is_featured ? 'Destaque removido' : 'Marcado como destaque!' 
-      });
-    }
+    if (selectedAlbum) fetchPhotos(selectedAlbum.id);
+    toast({ title: image.is_featured ? 'Destaque removido' : 'Marcado como destaque!' });
   };
 
-  const handleEdit = (image: GalleryImage) => {
+  const handleSetCover = async (image: GalleryImage) => {
+    if (!selectedAlbum) return;
+
+    await supabase
+      .from('albums')
+      .update({ cover_image_url: image.image_url })
+      .eq('id', selectedAlbum.id);
+
+    toast({ title: 'Capa do álbum atualizada!' });
+    fetchAlbums();
+  };
+
+  const handleEditPhoto = (image: GalleryImage) => {
     setEditingImage(image);
-    setFormData({
-      category: image.category,
-      title: image.title,
-      description: image.description,
-    });
-    setIsDialogOpen(true);
+    setPhotoFormData({ title: image.title, description: image.description });
+    setIsPhotoDialogOpen(true);
   };
 
-  const resetForm = () => {
-    setFormData({ category: '', title: '', description: '' });
-    setEditingImage(null);
-    setIsDialogOpen(false);
+  const handleUpdatePhoto = async () => {
+    if (!editingImage) return;
+
+    const { error } = await supabase
+      .from('site_images')
+      .update({
+        title: photoFormData.title,
+        description: photoFormData.description,
+      })
+      .eq('id', editingImage.id);
+
+    if (error) {
+      toast({ title: 'Erro ao salvar', variant: 'destructive' });
+    } else {
+      toast({ title: 'Foto atualizada!' });
+      setIsPhotoDialogOpen(false);
+      setEditingImage(null);
+      if (selectedAlbum) fetchPhotos(selectedAlbum.id);
+    }
   };
 
   const toggleImageSelection = (id: string, checked: boolean) => {
     setSelectedImages((prev) => {
       const next = new Set(prev);
-      if (checked) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   };
 
-  const filteredImages = selectedCategory === 'all'
-    ? images
-    : images.filter((img) => img.category === selectedCategory);
-
   if (loading) {
-    return <div className="text-center text-muted-foreground">Carregando...</div>;
+    return <div className="flex items-center justify-center p-12">
+      <Loader2 className="h-8 w-8 animate-spin text-gold" />
+    </div>;
   }
+
+  // Get current category label
+  const currentCategoryLabel = selectedCategory 
+    ? CATEGORIES.find(c => c.id === selectedCategory)?.label 
+    : null;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Breadcrumbs */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl text-foreground">Galeria</h2>
-          <p className="text-sm text-muted-foreground">
-            Gerencie as fotos da galeria • Arraste para reordenar
-          </p>
+          {currentLevel === 'categories' ? (
+            <>
+              <h2 className="font-serif text-2xl text-foreground">Portfólio</h2>
+              <p className="text-sm text-muted-foreground">
+                Gerencie seus álbuns por categoria
+              </p>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink 
+                      onClick={() => { setCurrentLevel('categories'); setSelectedCategory(null); setSelectedAlbum(null); }}
+                      className="cursor-pointer hover:text-gold"
+                    >
+                      Portfólio
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  {selectedCategory && (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        {currentLevel === 'albums' ? (
+                          <BreadcrumbPage>{currentCategoryLabel}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink 
+                            onClick={() => { setCurrentLevel('albums'); setSelectedAlbum(null); }}
+                            className="cursor-pointer hover:text-gold"
+                          >
+                            {currentCategoryLabel}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </>
+                  )}
+                  {selectedAlbum && (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{selectedAlbum.title}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={navigateBack}
+                className="mt-1 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <Select value={uploadCategory} onValueChange={setUploadCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Context Actions */}
+        {currentLevel === 'albums' && selectedCategory && (
+          <Button
+            onClick={() => openAlbumDialog()}
+            className="bg-gold text-soft-black hover:bg-gold-dark"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Ensaio
+          </Button>
+        )}
+        {currentLevel === 'photos' && (
           <Button
             onClick={() => fileInputRef.current?.click()}
             className="bg-gold text-soft-black hover:bg-gold-dark"
@@ -516,164 +831,269 @@ const AdminGallery = () => {
             <Plus className="mr-2 h-4 w-4" />
             Adicionar Fotos
           </Button>
-        </div>
+        )}
       </div>
 
-      {/* Hidden File Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
-      />
-
-      {/* Drag & Drop Zone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-all ${
-          isDragOver
-            ? 'border-gold bg-gold/5'
-            : 'border-border/50 hover:border-gold/50 hover:bg-muted/30'
-        }`}
-      >
-        <Upload className={`mx-auto mb-3 h-10 w-10 ${isDragOver ? 'text-gold' : 'text-muted-foreground/50'}`} />
-        <p className="font-medium text-foreground">
-          Arraste suas fotos para cá ou clique para selecionar
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Categoria selecionada: <span className="text-gold">{CATEGORIES.find(c => c.id === uploadCategory)?.label}</span>
-        </p>
-      </div>
-
-      {/* Upload Progress */}
-      {uploadingFiles.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-border/50 bg-card p-4">
-          <p className="text-sm font-medium text-foreground">Enviando fotos...</p>
-          {uploadingFiles.map((upload, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <img
-                src={upload.preview}
-                alt=""
-                className="h-12 w-12 rounded object-cover"
-              />
-              <div className="flex-1">
-                <p className="text-sm truncate text-foreground">{upload.file.name}</p>
-                <Progress value={upload.progress} className="mt-1 h-2" />
-              </div>
-              {upload.status === 'complete' && (
-                <span className="text-xs text-green-500">✓</span>
-              )}
-              {upload.status === 'error' && (
-                <span className="text-xs text-destructive">Erro</span>
-              )}
-              {upload.status === 'uploading' && (
-                <Loader2 className="h-4 w-4 animate-spin text-gold" />
-              )}
-            </div>
+      {/* Level 1: Categories Dashboard */}
+      {currentLevel === 'categories' && (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {CATEGORIES.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              albumCount={getAlbumCount(category.id)}
+              coverImage={getCategoryCover(category.id)}
+              onClick={() => navigateToCategory(category.id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        <Button
-          variant={selectedCategory === 'all' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setSelectedCategory('all')}
-          className={selectedCategory === 'all' 
-            ? 'bg-gold text-soft-black hover:bg-gold-dark' 
-            : 'border border-border/50 hover:border-gold/50 hover:text-gold'
-          }
-        >
-          Todas ({images.length})
-        </Button>
-        {CATEGORIES.map((cat) => {
-          const count = images.filter((img) => img.category === cat.id).length;
-          return (
-            <Button
-              key={cat.id}
-              variant={selectedCategory === cat.id ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={selectedCategory === cat.id
-                ? 'bg-gold text-soft-black hover:bg-gold-dark'
-                : 'border border-border/50 hover:border-gold/50 hover:text-gold'
-              }
-            >
-              {cat.label} ({count})
-            </Button>
-          );
-        })}
-      </div>
+      {/* Level 2: Albums List */}
+      {currentLevel === 'albums' && selectedCategory && (
+        <>
+          {albums.filter(a => a.category === selectedCategory).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FolderOpen className="mb-4 h-16 w-16 text-muted-foreground/30" />
+              <h3 className="font-serif text-xl text-foreground">Nenhum ensaio ainda</h3>
+              <p className="mt-2 text-muted-foreground">
+                Crie seu primeiro ensaio nesta categoria
+              </p>
+              <Button
+                onClick={() => openAlbumDialog()}
+                className="mt-6 bg-gold text-soft-black hover:bg-gold-dark"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Ensaio
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {albums
+                .filter(a => a.category === selectedCategory)
+                .map((album) => (
+                  <AlbumCard
+                    key={album.id}
+                    album={album}
+                    photoCount={getPhotoCount(album.id)}
+                    onClick={() => navigateToAlbum(album)}
+                    onEdit={() => openAlbumDialog(album)}
+                    onDelete={() => handleDeleteAlbum(album.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </>
+      )}
 
-      {/* Images Grid with DnD */}
-      {filteredImages.length > 0 && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={filteredImages.map((img) => img.id)} strategy={rectSortingStrategy}>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredImages.map((image) => (
-                <SortableImageCard
-                  key={image.id}
-                  image={image}
-                  onEdit={() => handleEdit(image)}
-                  onDelete={() => handleDelete(image.id)}
-                  onToggleFeatured={() => handleToggleFeatured(image)}
-                  isSelected={selectedImages.has(image.id)}
-                  onSelect={(checked) => toggleImageSelection(image.id, checked)}
-                  categoryLabel={CATEGORIES.find((c) => c.id === image.category)?.label || ''}
-                />
+      {/* Level 3: Photo Editor */}
+      {currentLevel === 'photos' && selectedAlbum && (
+        <>
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+          />
+
+          {/* Drag & Drop Zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-all ${
+              isDragOver
+                ? 'border-gold bg-gold/5'
+                : 'border-border/50 hover:border-gold/50 hover:bg-muted/30'
+            }`}
+          >
+            <Upload className={`mx-auto mb-3 h-10 w-10 ${isDragOver ? 'text-gold' : 'text-muted-foreground/50'}`} />
+            <p className="font-medium text-foreground">
+              Arraste suas fotos ou clique para selecionar
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Álbum: <span className="text-gold">{selectedAlbum.title}</span>
+            </p>
+          </div>
+
+          {/* Upload Progress */}
+          {uploadingFiles.length > 0 && (
+            <div className="space-y-3 rounded-lg border border-border/50 bg-card p-4">
+              <p className="text-sm font-medium text-foreground">Enviando fotos...</p>
+              {uploadingFiles.map((upload, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <img
+                    src={upload.preview}
+                    alt=""
+                    className="h-12 w-12 rounded object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm truncate text-foreground">{upload.file.name}</p>
+                    <Progress value={upload.progress} className="mt-1 h-2" />
+                  </div>
+                  {upload.status === 'complete' && (
+                    <span className="text-xs text-green-500">✓</span>
+                  )}
+                  {upload.status === 'error' && (
+                    <span className="text-xs text-destructive">Erro</span>
+                  )}
+                  {upload.status === 'uploading' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-gold" />
+                  )}
+                </div>
               ))}
             </div>
-          </SortableContext>
-        </DndContext>
+          )}
+
+          {/* Images Grid with DnD */}
+          {images.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {images.map((image) => (
+                    <SortableImageCard
+                      key={image.id}
+                      image={image}
+                      onEdit={() => handleEditPhoto(image)}
+                      onDelete={() => handleDeletePhoto(image.id)}
+                      onToggleFeatured={() => handleToggleFeatured(image)}
+                      isSelected={selectedImages.has(image.id)}
+                      onSelect={(checked) => toggleImageSelection(image.id, checked)}
+                      onSetCover={() => handleSetCover(image)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              Nenhuma foto neste ensaio ainda
+            </div>
+          )}
+
+          {/* Bulk Actions Bar */}
+          {selectedImages.size > 0 && (
+            <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-fade-in-up">
+              <div className="flex items-center gap-4 rounded-full border border-border/50 bg-card px-6 py-3 shadow-xl">
+                <span className="text-sm font-medium text-foreground">
+                  {selectedImages.size} foto(s)
+                </span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="rounded-full"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedImages(new Set())}
+                  className="rounded-full"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Bulk Actions Bar */}
-      {selectedImages.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-fade-in-up">
-          <div className="flex items-center gap-4 rounded-full border border-border/50 bg-card px-6 py-3 shadow-xl">
-            <span className="text-sm font-medium text-foreground">
-              {selectedImages.size} foto(s) selecionada(s)
-            </span>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleBulkDelete}
-              className="rounded-full"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir Selecionadas
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedImages(new Set())}
-              className="rounded-full"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Album Dialog */}
+      <Dialog open={isAlbumDialogOpen} onOpenChange={setIsAlbumDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAlbum ? 'Editar Ensaio' : 'Novo Ensaio'}
+            </DialogTitle>
+          </DialogHeader>
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              editingAlbum ? handleUpdateAlbum() : handleCreateAlbum();
+            }} 
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label>Título do Ensaio *</Label>
+              <Input
+                value={albumFormData.title}
+                onChange={(e) => setAlbumFormData({ ...albumFormData, title: e.target.value })}
+                placeholder="Ex: Mariana & João"
+                required
+              />
+            </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <div className="space-y-2">
+              <Label>Data do Evento</Label>
+              <Input
+                type="date"
+                value={albumFormData.event_date}
+                onChange={(e) => setAlbumFormData({ ...albumFormData, event_date: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={albumFormData.status}
+                onValueChange={(value) => setAlbumFormData({ ...albumFormData, status: value as 'draft' | 'published' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Rascunho</SelectItem>
+                  <SelectItem value="published">Publicado</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Rascunhos não aparecem no site público
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetAlbumForm}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gold text-soft-black hover:bg-gold-dark"
+              >
+                {editingAlbum ? 'Salvar' : 'Criar Ensaio'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Edit Dialog */}
+      <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Foto</DialogTitle>
           </DialogHeader>
           {editingImage && (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleUpdatePhoto(); }} 
+              className="space-y-4"
+            >
               <div className="overflow-hidden rounded-lg">
                 <img
                   src={editingImage.image_url}
@@ -683,41 +1103,19 @@ const AdminGallery = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label>Texto Alternativo (SEO)</Label>
                 <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Descreva a imagem para SEO"
+                  value={photoFormData.title}
+                  onChange={(e) => setPhotoFormData({ ...photoFormData, title: e.target.value })}
+                  placeholder="Descreva a imagem"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use uma descrição clara da foto para melhorar o SEO
-                </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Descrição (opcional)</Label>
+                <Label>Descrição</Label>
                 <Input
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={photoFormData.description}
+                  onChange={(e) => setPhotoFormData({ ...photoFormData, description: e.target.value })}
                   placeholder="Descrição adicional"
                 />
               </div>
@@ -726,7 +1124,7 @@ const AdminGallery = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={resetForm}
+                  onClick={() => setIsPhotoDialogOpen(false)}
                   className="flex-1"
                 >
                   Cancelar
