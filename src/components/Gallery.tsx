@@ -57,7 +57,6 @@ const defaultCategories: Category[] = [
 ];
 
 const Gallery = () => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [albumCounts, setAlbumCounts] = useState<Record<string, number>>({});
 
@@ -138,43 +137,36 @@ const Gallery = () => {
             <Link
               key={category.id}
               to={`/categoria/${category.id}`}
-              className="group relative aspect-[3/4] cursor-pointer overflow-hidden"
-              onMouseEnter={() => setHoveredId(category.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              className="group relative h-[400px] w-full cursor-pointer overflow-hidden rounded-sm transition-transform duration-500 hover:scale-[1.03] hover:z-10"
             >
+              {/* Imagem de Fundo (Sem Zoom) */}
               <img
                 src={category.image}
                 alt={`Fotografia de ${category.title}`}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="absolute inset-0 h-full w-full object-cover"
               />
-              <div
-                className={`absolute inset-0 transition-all duration-500 ${
-                  hoveredId === category.id
-                    ? "bg-soft-black/60"
-                    : "bg-gradient-to-t from-soft-black/70 via-soft-black/20 to-transparent"
-                }`}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-center">
-                <h3 className="font-serif text-2xl font-normal text-primary-foreground transition-all duration-300 group-hover:mb-2">
-                  {category.title}
-                </h3>
-                <p className="mb-2 text-xs uppercase tracking-wider text-gold">
-                  {albumCounts[category.id] || 0} Álbuns
-                </p>
-                <p
-                  className={`max-w-xs font-sans text-sm font-light text-primary-foreground/80 transition-all duration-300 ${
-                    hoveredId === category.id
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-4 opacity-0"
-                  }`}
-                >
+              
+              {/* Overlay Gradiente (Sempre visível para legibilidade, mas escurece no hover) */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-all duration-500 group-hover:from-black/80 group-hover:via-black/40" />
+
+              {/* Conteúdo */}
+              <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
+                <div className="mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-white/70">
+                  <span className="border border-white/30 px-2 py-1">
+                    {category.title}
+                  </span>
+                  <span>
+                    {albumCounts[category.id] || 0} Álbuns
+                  </span>
+                </div>
+                
+                <h3 className="font-serif text-2xl font-normal text-white md:text-3xl">
                   {category.description}
-                </p>
-                <div
-                  className={`mt-4 h-[1px] w-12 bg-gold transition-all duration-500 ${
-                    hoveredId === category.id ? "w-24 opacity-100" : "opacity-0"
-                  }`}
-                />
+                </h3>
+                
+                <div className="mt-4 flex items-center gap-2 text-sm font-medium text-white/80 transition-all duration-300 group-hover:text-white group-hover:gap-3">
+                  Ver Álbum <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </div>
               </div>
             </Link>
           ))}
