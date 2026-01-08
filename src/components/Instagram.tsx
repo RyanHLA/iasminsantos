@@ -1,35 +1,57 @@
-import { useEffect } from "react";
 import { Instagram as InstagramIcon } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
-declare global {
-  interface Window {
-    instgrm?: {
-      Embeds: {
-        process: () => void;
-      };
-    };
-  }
-}
+// Curated Instagram posts - update these with actual post images and links
+const instagramPosts = [
+  {
+    id: 1,
+    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 2,
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 3,
+    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 4,
+    imageUrl: "https://images.unsplash.com/photo-1460978812857-470ed1c77af0?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 5,
+    imageUrl: "https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 6,
+    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 7,
+    imageUrl: "https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+  {
+    id: 8,
+    imageUrl: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&h=400&fit=crop",
+    link: "https://instagram.com/iasminsantosfotografia",
+  },
+];
 
 const Instagram = () => {
-  useEffect(() => {
-    // Load Instagram embed script
-    const script = document.createElement("script");
-    script.src = "https://www.instagram.com/embed.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.instgrm) {
-        window.instgrm.Embeds.process();
-      }
-    };
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   return (
     <section className="py-20 bg-secondary/30">
       <div className="container mx-auto px-4">
@@ -51,43 +73,41 @@ const Instagram = () => {
           </a>
         </div>
 
-        {/* Instagram Profile Embed */}
-        <div className="flex justify-center">
-          <blockquote
-            className="instagram-media"
-            data-instgrm-permalink="https://www.instagram.com/iasminsantosfotografia/"
-            data-instgrm-version="14"
-            style={{
-              background: "#FFF",
-              border: 0,
-              borderRadius: "3px",
-              boxShadow: "0 0 1px 0 rgba(0,0,0,0.5), 0 1px 10px 0 rgba(0,0,0,0.15)",
-              margin: "1px",
-              maxWidth: "540px",
-              minWidth: "326px",
-              padding: 0,
-              width: "calc(100% - 2px)",
-            }}
-          >
-            <div style={{ padding: "16px" }}>
-              <a
-                href="https://www.instagram.com/iasminsantosfotografia/"
-                style={{
-                  background: "#FFFFFF",
-                  lineHeight: 0,
-                  padding: "0 0",
-                  textAlign: "center",
-                  textDecoration: "none",
-                  width: "100%",
-                }}
-                target="_blank"
-                rel="noopener noreferrer"
+        {/* Carousel */}
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full max-w-6xl mx-auto"
+        >
+          <CarouselContent className="-ml-2 md:-ml-4">
+            {instagramPosts.map((post) => (
+              <CarouselItem
+                key={post.id}
+                className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
               >
-                Carregando Instagram...
-              </a>
-            </div>
-          </blockquote>
-        </div>
+                <a
+                  href={post.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block aspect-square overflow-hidden rounded-lg group relative"
+                >
+                  <img
+                    src={post.imageUrl}
+                    alt="Instagram post"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <InstagramIcon className="w-8 h-8 text-white" />
+                  </div>
+                </a>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:flex -left-12 bg-background/80 backdrop-blur-sm border-border hover:bg-background" />
+          <CarouselNext className="hidden md:flex -right-12 bg-background/80 backdrop-blur-sm border-border hover:bg-background" />
+        </Carousel>
 
         {/* CTA */}
         <div className="text-center mt-10">
