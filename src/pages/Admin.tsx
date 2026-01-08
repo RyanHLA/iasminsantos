@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, Image, Home, User, Grid } from 'lucide-react';
-import AdminGallery from '@/components/admin/AdminGallery';
+import AdminLayout from '@/components/admin/AdminLayout';
+import AdminDashboard from '@/components/admin/AdminDashboard';
+import AdminGalleryNew from '@/components/admin/AdminGalleryNew';
 import AdminHero from '@/components/admin/AdminHero';
 import AdminAbout from '@/components/admin/AdminAbout';
+import AdminSettings from '@/components/admin/AdminSettings';
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('gallery');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -26,8 +26,8 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="animate-pulse text-slate-400">Carregando...</div>
       </div>
     );
   }
@@ -36,69 +36,43 @@ const Admin = () => {
     return null;
   }
 
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'Dashboard';
+      case 'gallery': return 'Galeria';
+      case 'hero': return 'Hero';
+      case 'about': return 'Sobre';
+      case 'settings': return 'Configurações';
+      default: return 'Dashboard';
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <AdminDashboard />;
+      case 'gallery':
+        return <AdminGalleryNew />;
+      case 'hero':
+        return <AdminHero />;
+      case 'about':
+        return <AdminAbout />;
+      case 'settings':
+        return <AdminSettings />;
+      default:
+        return <AdminDashboard />;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="font-serif text-2xl text-foreground">Painel Administrativo</h1>
-            <p className="text-sm text-muted-foreground">Gerencie suas fotos</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-medium text-soft-black transition-colors hover:bg-gold-dark"
-            >
-              Ver site →
-            </a>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted/50">
-            <TabsTrigger value="gallery" className="data-[state=active]:bg-gold data-[state=active]:text-soft-black">
-              <Grid className="mr-2 h-4 w-4" />
-              Galeria
-            </TabsTrigger>
-            <TabsTrigger value="hero" className="data-[state=active]:bg-gold data-[state=active]:text-soft-black">
-              <Home className="mr-2 h-4 w-4" />
-              Hero
-            </TabsTrigger>
-            <TabsTrigger value="about" className="data-[state=active]:bg-gold data-[state=active]:text-soft-black">
-              <User className="mr-2 h-4 w-4" />
-              Sobre
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="gallery" className="space-y-6">
-            <AdminGallery />
-          </TabsContent>
-
-          <TabsContent value="hero" className="space-y-6">
-            <AdminHero />
-          </TabsContent>
-
-          <TabsContent value="about" className="space-y-6">
-            <AdminAbout />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+    <AdminLayout
+      activeTab={activeTab}
+      pageTitle={getPageTitle()}
+      onTabChange={setActiveTab}
+      onSignOut={handleSignOut}
+    >
+      {renderContent()}
+    </AdminLayout>
   );
 };
 
