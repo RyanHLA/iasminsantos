@@ -11,7 +11,6 @@ interface Album {
   id: string;
   title: string;
   cover_image_url: string | null;
-  client_pin: string | null;
   client_enabled: boolean;
   selection_limit: number | null;
   client_submitted_at: string | null;
@@ -51,9 +50,10 @@ const ClientProof = () => {
     const fetchAlbum = async () => {
       if (!albumId) return;
       
+      // Explicitly select only non-sensitive columns (never fetch client_pin)
       const { data, error } = await supabase
         .from('albums')
-        .select('*')
+        .select('id, title, cover_image_url, client_enabled, selection_limit, client_submitted_at, category')
         .eq('id', albumId)
         .eq('client_enabled', true)
         .maybeSingle();
@@ -100,13 +100,25 @@ const ClientProof = () => {
     fetchSelections();
   }, [isUnlocked, albumId]);
 
-  const handlePinSubmit = (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError('');
     
-    if (!album) return;
+    if (!album || !albumId) return;
     
-    if (pin === album.client_pin) {
+    // Server-side PIN verification - never expose the actual PIN to client
+    const { data: isValid, error } = await supabase.rpc('verify_album_pin', {
+      album_uuid: albumId,
+      pin_attempt: pin
+    });
+    
+    if (error) {
+      setPinError('Erro ao verificar PIN. Tente novamente.');
+      setPin('');
+      return;
+    }
+    
+    if (isValid) {
       setIsUnlocked(true);
     } else {
       setPinError('PIN incorreto. Tente novamente.');

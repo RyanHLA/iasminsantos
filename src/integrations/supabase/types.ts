@@ -175,6 +175,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_album_pin: {
+        Args: { album_uuid: string; pin_attempt: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"
