@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { ArrowDown, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Fallback images
@@ -56,10 +57,152 @@ const defaultCategories: Category[] = [
   },
 ];
 
+interface CategoryCardProps {
+  category: Category;
+  index: number;
+  total: number;
+  albumCount: number;
+  setRef: (el: HTMLDivElement | null, index: number) => void;
+}
+
+const CategoryCard = ({ category, index, total, albumCount, setRef }: CategoryCardProps) => {
+  return (
+    <div
+      ref={(el) => setRef(el, index)}
+      className="category-card sticky top-0 h-[100dvh] w-full flex flex-col justify-center items-center overflow-hidden border-t border-white/10 shadow-2xl transition-transform will-change-transform"
+      style={{ zIndex: index + 1 }}
+    >
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img
+          src={category.image}
+          alt={`Fotografia de ${category.title}`}
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+      </div>
+
+      {/* Overlay de Dimming */}
+      <div className="card-overlay absolute inset-0 bg-black pointer-events-none opacity-0 z-20 will-change-opacity" />
+
+      {/* Conteúdo */}
+      <div className="card-content container mx-auto px-6 relative z-10 flex flex-col items-center justify-center text-center h-full will-change-transform">
+        <div className="space-y-6 max-w-2xl">
+          <div className="flex items-center justify-center gap-3 text-sm uppercase tracking-widest text-gold">
+            <Camera size={16} />
+            <span>0{index + 1} / 0{total} — {albumCount} Álbuns</span>
+          </div>
+          
+          <h2 className="font-serif text-4xl md:text-6xl lg:text-7xl font-normal text-primary-foreground leading-tight">
+            {category.title}
+          </h2>
+          
+          <p className="text-lg md:text-xl text-primary-foreground/80 max-w-lg mx-auto leading-relaxed font-light">
+            {category.description}
+          </p>
+
+          <div className="pt-8">
+            <Link
+              to={`/categoria/${category.id}`}
+              className="inline-flex items-center gap-2 px-8 py-3 border border-gold text-gold hover:bg-gold hover:text-soft-black transition-all duration-300 font-sans text-sm uppercase tracking-widest"
+            >
+              Ver Álbuns <ArrowDown size={16} className="-rotate-90" />
+            </Link>
+          </div>
+        </div>
+      </div>
+      
+      {/* Scroll Indicator apenas no primeiro card */}
+      {index === 0 && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-gold/50 z-30 pointer-events-none">
+          <ArrowDown size={24} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Gallery = () => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [albumCounts, setAlbumCounts] = useState<Record<string, number>>({});
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  const setRef = (el: HTMLDivElement | null, index: number) => {
+    cardsRef.current[index] = el;
+  };
+
+  // Sticky stack scroll effect
+  useEffect(() => {
+    let requestAnimationFrameId: number;
+
+    const handleScroll = () => {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      const viewportHeight = window.innerHeight;
+
+      cardsRef.current.forEach((card, index) => {
+        if (index === cardsRef.current.length - 1 || !card) return;
+
+        const nextCard = cardsRef.current[index + 1];
+        if (!nextCard) return;
+
+        const nextCardRect = nextCard.getBoundingClientRect();
+        
+        if (nextCardRect.top > viewportHeight * 1.5) {
+          card.style.transform = 'scale(1)';
+          const overlay = card.querySelector('.card-overlay') as HTMLElement;
+          if (overlay) overlay.style.opacity = '0';
+          return; 
+        }
+
+        const distanceToTop = nextCardRect.top;
+        let progress = 0;
+
+        if (distanceToTop <= viewportHeight) {
+          progress = 1 - (distanceToTop / viewportHeight);
+        }
+
+        progress = Math.max(0, Math.min(1, progress));
+
+        const overlay = card.querySelector('.card-overlay') as HTMLElement;
+        const content = card.querySelector('.card-content') as HTMLElement;
+
+        if (progress > 0) {
+          const scale = 1 - (progress * 0.1); 
+          const overlayOpacity = progress * 0.8;
+          const translateY = -(progress * 50);
+
+          card.style.transform = `scale(${scale})`;
+          
+          if (overlay) overlay.style.opacity = `${overlayOpacity}`;
+          if (content) content.style.transform = `translateY(${translateY}px)`;
+        } else {
+          card.style.transform = 'scale(1)';
+          if (overlay) overlay.style.opacity = '0';
+          if (content) content.style.transform = 'translateY(0px)';
+        }
+      });
+
+      requestAnimationFrameId = requestAnimationFrame(handleScroll);
+    };
+
+    const onScroll = () => {
+      if (requestAnimationFrameId) cancelAnimationFrame(requestAnimationFrameId);
+      requestAnimationFrameId = requestAnimationFrame(handleScroll);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (requestAnimationFrameId) cancelAnimationFrame(requestAnimationFrameId);
+    };
+  }, []);
 
   // Fetch album counts for each category
   useEffect(() => {
@@ -115,10 +258,10 @@ const Gallery = () => {
   }, []);
 
   return (
-    <section id="albuns" className="section-padding bg-background">
-      <div className="mx-auto max-w-7xl px-6">
-        {/* Section Header */}
-        <div className="mb-16 text-center">
+    <section id="albuns" className="bg-background">
+      {/* Section Header */}
+      <div className="section-padding bg-background">
+        <div className="mx-auto max-w-7xl px-6 text-center">
           <p className="mb-3 font-sans text-sm uppercase tracking-[0.25em] text-gold">
             Portfólio
           </p>
@@ -130,56 +273,25 @@ const Gallery = () => {
             Explore as diferentes categorias e descubra como cada momento
             especial pode ser transformado em memória eterna
           </p>
-        </div>
-
-        {/* Categories Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              to={`/categoria/${category.id}`}
-              className="group relative aspect-[3/4] cursor-pointer overflow-hidden"
-              onMouseEnter={() => setHoveredId(category.id)}
-              onMouseLeave={() => setHoveredId(null)}
-            >
-              <img
-                src={category.image}
-                alt={`Fotografia de ${category.title}`}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div
-                className={`absolute inset-0 transition-all duration-500 ${
-                  hoveredId === category.id
-                    ? "bg-soft-black/60"
-                    : "bg-gradient-to-t from-soft-black/70 via-soft-black/20 to-transparent"
-                }`}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-center">
-                <h3 className="font-serif text-2xl font-normal text-primary-foreground transition-all duration-300 group-hover:mb-2">
-                  {category.title}
-                </h3>
-                <p className="mb-2 text-xs uppercase tracking-wider text-gold">
-                  {albumCounts[category.id] || 0} Álbuns
-                </p>
-                <p
-                  className={`max-w-xs font-sans text-sm font-light text-primary-foreground/80 transition-all duration-300 ${
-                    hoveredId === category.id
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-4 opacity-0"
-                  }`}
-                >
-                  {category.description}
-                </p>
-                <div
-                  className={`mt-4 h-[1px] w-12 bg-gold transition-all duration-500 ${
-                    hoveredId === category.id ? "w-24 opacity-100" : "opacity-0"
-                  }`}
-                />
-              </div>
-            </Link>
-          ))}
+          <div className="mt-8 text-muted-foreground/50 text-sm animate-pulse">
+            Role para explorar ↓
+          </div>
         </div>
       </div>
+
+      {/* Sticky Stack Categories */}
+      <main className="relative w-full h-auto">
+        {categories.map((category, index) => (
+          <CategoryCard
+            key={category.id}
+            category={category}
+            index={index}
+            total={categories.length}
+            albumCount={albumCounts[category.id] || 0}
+            setRef={setRef}
+          />
+        ))}
+      </main>
     </section>
   );
 };
