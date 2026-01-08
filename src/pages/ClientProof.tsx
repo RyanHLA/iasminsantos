@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, Check, Camera, ArrowLeft, Send, Loader2, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Lock, Check, Camera, ArrowLeft, Send, Loader2, CheckCircle2, Image as ImageIcon, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
@@ -44,6 +44,7 @@ const ClientProof = () => {
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Check if album exists and is client-enabled
   useEffect(() => {
@@ -297,84 +298,114 @@ const ClientProof = () => {
       </header>
 
       {/* Photo Grid */}
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-28">
         {photos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <ImageIcon className="mb-4 h-12 w-12 text-white/20" />
             <p className="text-white/50">Nenhuma foto disponível neste álbum.</p>
           </div>
         ) : (
-          <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
-            {photos.map((photo) => {
-              const isSelected = selectedPhotos.has(photo.id);
-              return (
-                <div
-                  key={photo.id}
-                  className="group relative mb-3 break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
-                  onClick={() => togglePhotoSelection(photo.id)}
+          <>
+            {showFavoritesOnly && selectedPhotos.size === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Heart className="mb-4 h-12 w-12 text-white/20" />
+                <p className="text-white/50">Nenhuma foto selecionada ainda.</p>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowFavoritesOnly(false)}
+                  className="mt-4 text-white/60 hover:text-white"
                 >
-                  <img
-                    src={photo.image_url}
-                    alt={photo.title || ''}
-                    className="w-full transition-transform duration-300 group-hover:scale-[1.02]"
-                    loading="lazy"
-                  />
-                  
-                  {/* Selection Overlay */}
-                  <div
-                    className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-emerald-500/20'
-                        : 'bg-black/0 group-hover:bg-black/30'
-                    }`}
-                  >
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                        isSelected
-                          ? 'border-emerald-400 bg-emerald-500 scale-100'
-                          : 'border-white/50 bg-white/10 scale-0 group-hover:scale-100'
-                      }`}
-                    >
-                      <Check
-                        className={`h-5 w-5 transition-all ${
-                          isSelected ? 'text-white' : 'text-white/70'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Selected Border */}
-                  {isSelected && (
-                    <div className="absolute inset-0 rounded-lg ring-2 ring-emerald-400 ring-inset" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  Ver todas as fotos
+                </Button>
+              </div>
+            ) : (
+              <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
+                {photos
+                  .filter(photo => !showFavoritesOnly || selectedPhotos.has(photo.id))
+                  .map((photo) => {
+                    const isSelected = selectedPhotos.has(photo.id);
+                    return (
+                      <div
+                        key={photo.id}
+                        className="group relative mb-3 break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
+                        onClick={() => togglePhotoSelection(photo.id)}
+                      >
+                        <img
+                          src={photo.image_url}
+                          alt={photo.title || ''}
+                          className="w-full transition-transform duration-300 group-hover:scale-[1.02]"
+                          loading="lazy"
+                        />
+                        
+                        {/* Selection Overlay */}
+                        <div
+                          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-emerald-500/20'
+                              : 'bg-black/0 group-hover:bg-black/30'
+                          }`}
+                        >
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
+                              isSelected
+                                ? 'border-emerald-400 bg-emerald-500 scale-100'
+                                : 'border-white/50 bg-white/10 scale-0 group-hover:scale-100'
+                            }`}
+                          >
+                            <Check
+                              className={`h-5 w-5 transition-all ${
+                                isSelected ? 'text-white' : 'text-white/70'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Selected Border */}
+                        {isSelected && (
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-emerald-400 ring-inset" />
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
         )}
       </main>
 
       {/* Sticky Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-slate-950/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div>
-            <p className="text-sm text-white/80">
-              <span className="text-lg font-medium text-white">{selectedPhotos.size}</span>
-              {album.selection_limit ? ` de ${album.selection_limit}` : ''} selecionadas
-            </p>
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+          <p className="text-sm text-slate-600 whitespace-nowrap">
+            <span className="text-lg font-semibold text-slate-900">{selectedPhotos.size}</span>
+            {album.selection_limit ? ` / ${album.selection_limit}` : ''} fotos selecionadas
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`h-11 rounded-xl border-slate-200 px-4 text-sm ${
+                showFavoritesOnly 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Heart className={`mr-2 h-4 w-4 ${showFavoritesOnly ? 'fill-emerald-500' : ''}`} />
+              <span className="hidden sm:inline">Ver favoritas</span>
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={selectedPhotos.size === 0 || isSubmitting}
+              className="h-11 rounded-xl bg-emerald-500 px-6 text-white hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Finalizar Seleção
+            </Button>
           </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={selectedPhotos.size === 0 || isSubmitting}
-            className="h-12 rounded-xl bg-emerald-500 px-8 text-white hover:bg-emerald-600 disabled:bg-white/10 disabled:text-white/30"
-          >
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="mr-2 h-4 w-4" />
-            )}
-            Enviar Seleção
-          </Button>
         </div>
       </div>
 
