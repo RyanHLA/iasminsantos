@@ -4,6 +4,7 @@ import Gallery from "@/components/Gallery";
 import About from "@/components/About";
 import Services from "@/components/Services";
 import Testimonials from "@/components/Testimonials";
+import Instagram from "@/components/Instagram";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import StickySection from "@/components/StickySection";
@@ -36,6 +37,9 @@ const Index = () => {
       </section>
       <section id="depoimentos">
         <Testimonials />
+      </section>
+      <section id="instagram">
+        <Instagram />
       </section>
       <section id="contato">
         <Contact />
