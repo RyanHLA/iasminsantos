@@ -15,6 +15,8 @@ const Index = () => {
   return (
     <main className="min-h-screen">
       <Header />
+      
+      {/* Sticky Stack effect only for Hero and Gallery */}
       <div ref={containerRef} className="relative w-full">
         <StickySection index={0} className="bg-background">
           <Hero />
@@ -23,27 +25,22 @@ const Index = () => {
         <StickySection index={1} id="albuns" className="bg-background">
           <Gallery />
         </StickySection>
-        
-        <StickySection index={2} id="sobre" className="bg-background">
-          <About />
-        </StickySection>
-        
-        <StickySection index={3} id="servicos" className="bg-background">
-          <Services />
-        </StickySection>
-        
-        <StickySection index={4} id="depoimentos" className="bg-background">
-          <Testimonials />
-        </StickySection>
-        
-        <StickySection index={5} id="contato" className="bg-background">
-          <Contact />
-        </StickySection>
-        
-        <StickySection index={6} className="bg-soft-black">
-          <Footer />
-        </StickySection>
       </div>
+      
+      {/* Normal sections without effect */}
+      <section id="sobre">
+        <About />
+      </section>
+      <section id="servicos">
+        <Services />
+      </section>
+      <section id="depoimentos">
+        <Testimonials />
+      </section>
+      <section id="contato">
+        <Contact />
+      </section>
+      <Footer />
     </main>
   );
 };
