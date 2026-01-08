@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Fallback images
@@ -56,8 +57,54 @@ const defaultCategories: Category[] = [
   },
 ];
 
+const AlbumCard = ({
+  category,
+  albumCount,
+}: {
+  category: Category;
+  albumCount: number;
+}) => (
+  <Link
+    to={`/categoria/${category.id}`}
+    className="group relative h-[400px] w-full cursor-pointer overflow-hidden rounded-sm transition-transform duration-500 hover:z-10 hover:scale-[1.03]"
+  >
+    {/* Background Image */}
+    <img
+      src={category.image}
+      alt={`Fotografia de ${category.title}`}
+      className="absolute inset-0 h-full w-full object-cover"
+    />
+
+    {/* Gradient Overlay */}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20 transition-all duration-500 group-hover:from-black/90 group-hover:via-black/50" />
+
+    {/* Content */}
+    <div className="absolute inset-0 flex flex-col justify-end p-6">
+      {/* Tags */}
+      <div className="mb-3 flex items-center gap-3">
+        <span className="rounded-full bg-white/20 px-3 py-1 font-sans text-xs uppercase tracking-wider text-white/90 backdrop-blur-sm">
+          {category.title}
+        </span>
+        <span className="font-sans text-sm text-white/70">
+          {albumCount} {albumCount === 1 ? "Álbum" : "Álbuns"}
+        </span>
+      </div>
+
+      {/* Title */}
+      <h3 className="font-serif text-2xl font-normal leading-tight text-white transition-all duration-300 group-hover:text-white md:text-3xl">
+        {category.description}
+      </h3>
+
+      {/* View Button */}
+      <div className="mt-4 flex items-center gap-2 text-sm text-white/70 transition-all duration-300 group-hover:text-white">
+        Ver Álbuns{" "}
+        <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+      </div>
+    </div>
+  </Link>
+);
+
 const Gallery = () => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [albumCounts, setAlbumCounts] = useState<Record<string, number>>({});
 
@@ -115,68 +162,27 @@ const Gallery = () => {
   }, []);
 
   return (
-    <div className="section-padding bg-background">
+    <div className="min-h-screen bg-[#0a0a0a] py-20">
       <div className="mx-auto max-w-7xl px-6">
         {/* Section Header */}
-        <div className="mb-16 text-center">
-          <p className="mb-3 font-sans text-sm uppercase tracking-[0.25em] text-gold">
-            Portfólio
+        <div className="mb-16">
+          <p className="mb-4 font-sans text-sm uppercase tracking-[0.3em] text-white/50">
+            Portfólio Selecionado
           </p>
-          <h2 className="font-serif text-3xl font-normal text-foreground md:text-4xl lg:text-5xl">
-            Álbuns
-          </h2>
-          <div className="mx-auto mt-6 h-[1px] w-16 bg-gold/50" />
-          <p className="mx-auto mt-6 max-w-lg font-sans text-base font-light leading-relaxed text-muted-foreground">
-            Explore as diferentes categorias e descubra como cada momento
-            especial pode ser transformado em memória eterna
+          <p className="max-w-xl font-sans text-base font-light leading-relaxed text-white/60">
+            Explorações visuais através de luz, sombra e composição. Selecione
+            uma categoria para ver os álbuns completos.
           </p>
         </div>
 
         {/* Categories Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
-            <Link
+            <AlbumCard
               key={category.id}
-              to={`/categoria/${category.id}`}
-              className="group relative aspect-[3/4] cursor-pointer overflow-hidden"
-              onMouseEnter={() => setHoveredId(category.id)}
-              onMouseLeave={() => setHoveredId(null)}
-            >
-              <img
-                src={category.image}
-                alt={`Fotografia de ${category.title}`}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div
-                className={`absolute inset-0 transition-all duration-500 ${
-                  hoveredId === category.id
-                    ? "bg-soft-black/60"
-                    : "bg-gradient-to-t from-soft-black/70 via-soft-black/20 to-transparent"
-                }`}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-center">
-                <h3 className="font-serif text-2xl font-normal text-primary-foreground transition-all duration-300 group-hover:mb-2">
-                  {category.title}
-                </h3>
-                <p className="mb-2 text-xs uppercase tracking-wider text-gold">
-                  {albumCounts[category.id] || 0} Álbuns
-                </p>
-                <p
-                  className={`max-w-xs font-sans text-sm font-light text-primary-foreground/80 transition-all duration-300 ${
-                    hoveredId === category.id
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-4 opacity-0"
-                  }`}
-                >
-                  {category.description}
-                </p>
-                <div
-                  className={`mt-4 h-[1px] w-12 bg-gold transition-all duration-500 ${
-                    hoveredId === category.id ? "w-24 opacity-100" : "opacity-0"
-                  }`}
-                />
-              </div>
-            </Link>
+              category={category}
+              albumCount={albumCounts[category.id] || 0}
+            />
           ))}
         </div>
       </div>
