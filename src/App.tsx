@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import CategoryAlbums from "./pages/CategoryAlbums";
 import AlbumPhotos from "./pages/AlbumPhotos";
+import ClientProof from "./pages/ClientProof";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/categoria/:categoryId" element={<CategoryAlbums />} />
             <Route path="/album/:albumId" element={<AlbumPhotos />} />
+            <Route path="/cliente/:albumId" element={<ClientProof />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

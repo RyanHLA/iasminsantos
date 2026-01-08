@@ -17,35 +17,83 @@ export type Database = {
       albums: {
         Row: {
           category: string
+          client_enabled: boolean
+          client_pin: string | null
+          client_submitted_at: string | null
           cover_image_url: string | null
           created_at: string
           event_date: string | null
           id: string
+          selection_limit: number | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
           category: string
+          client_enabled?: boolean
+          client_pin?: string | null
+          client_submitted_at?: string | null
           cover_image_url?: string | null
           created_at?: string
           event_date?: string | null
           id?: string
+          selection_limit?: number | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
           category?: string
+          client_enabled?: boolean
+          client_pin?: string | null
+          client_submitted_at?: string | null
           cover_image_url?: string | null
           created_at?: string
           event_date?: string | null
           id?: string
+          selection_limit?: number | null
           status?: string
           title?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      client_selections: {
+        Row: {
+          album_id: string
+          created_at: string
+          id: string
+          image_id: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          id?: string
+          image_id: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          id?: string
+          image_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_selections_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_selections_image_id_fkey"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "site_images"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_images: {
         Row: {

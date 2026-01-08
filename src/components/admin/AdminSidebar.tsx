@@ -1,5 +1,5 @@
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, Images, Sparkles, User, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Images, Sparkles, User, Settings, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AdminSidebarProps {
@@ -10,7 +10,8 @@ interface AdminSidebarProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'gallery', label: 'Galeria', icon: Images },
+  { id: 'gallery', label: 'Portfólio', icon: Images },
+  { id: 'clients', label: 'Clientes', icon: Users },
   { id: 'hero', label: 'Hero', icon: Sparkles },
   { id: 'about', label: 'Sobre', icon: User },
   { id: 'settings', label: 'Configurações', icon: Settings },
