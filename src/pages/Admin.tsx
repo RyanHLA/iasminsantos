@@ -10,15 +10,15 @@ import AdminAbout from '@/components/admin/AdminAbout';
 import AdminSettings from '@/components/admin/AdminSettings';
 
 const Admin = () => {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && !isAdmin) {
       navigate('/auth');
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [isAdmin, loading, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,7 +33,7 @@ const Admin = () => {
     );
   }
 
-  if (!user || !isAdmin) {
+  if (!isAdmin) {
     return null;
   }
 

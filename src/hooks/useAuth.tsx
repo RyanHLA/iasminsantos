@@ -1,91 +1,57 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
   isAdmin: boolean;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
+  verifyPin: (pin: string) => Promise<{ success: boolean; error: string | null }>;
+  signOut: () => void;
 }
+
+const AUTH_STORAGE_KEY = 'admin_authenticated';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
-    
-    if (error) {
-      console.error('Error checking admin role:', error);
-      return false;
-    }
-    
-    return !!data;
-  };
-
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer admin check with setTimeout to prevent deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id).then(setIsAdmin);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        checkAdminRole(session.user.id).then((admin) => {
-          setIsAdmin(admin);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if already authenticated in this session
+    const authenticated = sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+    setIsAdmin(authenticated);
+    setLoading(false);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+  const verifyPin = async (pin: string): Promise<{ success: boolean; error: string | null }> => {
+    try {
+      const { data: isValid, error } = await supabase.rpc('verify_admin_pin', {
+        pin_attempt: pin
+      });
+
+      if (error) {
+        return { success: false, error: 'Erro ao verificar PIN. Tente novamente.' };
+      }
+
+      if (isValid) {
+        sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+        setIsAdmin(true);
+        return { success: true, error: null };
+      }
+
+      return { success: false, error: 'PIN incorreto.' };
+    } catch {
+      return { success: false, error: 'Erro inesperado. Tente novamente.' };
+    }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = () => {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
     setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ isAdmin, loading, verifyPin, signOut }}>
       {children}
     </AuthContext.Provider>
   );
