@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import AdminGalleryNew from '@/components/admin/AdminGalleryNew';
+import AdminClientAlbums from '@/components/admin/AdminClientAlbums';
 import AdminHero from '@/components/admin/AdminHero';
 import AdminAbout from '@/components/admin/AdminAbout';
 import AdminSettings from '@/components/admin/AdminSettings';
@@ -39,7 +40,8 @@ const Admin = () => {
   const getPageTitle = () => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
-      case 'gallery': return 'Galeria';
+      case 'gallery': return 'Portfólio';
+      case 'clients': return 'Clientes';
       case 'hero': return 'Hero';
       case 'about': return 'Sobre';
       case 'settings': return 'Configurações';
@@ -53,6 +55,8 @@ const Admin = () => {
         return <AdminDashboard />;
       case 'gallery':
         return <AdminGalleryNew />;
+      case 'clients':
+        return <AdminClientAlbums />;
       case 'hero':
         return <AdminHero />;
       case 'about':
